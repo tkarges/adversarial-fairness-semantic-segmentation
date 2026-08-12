@@ -40,6 +40,8 @@ NCCL_IB_DISABLE=1 NCCL_P2P_DISABLE=1 torchrun --standalone etc.
 ## General Structure
 The entry point for all training experiments is **main.py**. All possible arguments for performing different experiments are specified there. Afer it is invoked, it automatically starts one of the specific training scripts **train_normal.py**, **train_dafa.py**, or **train_rl.py**. In these scripts, the actual implementations can be found. Corresponding loss functions, as well as statistics computations in the case of DAFA, can be found in the corresponding files titled **losses_{approach}.py**.
 
+In the file **analysis**, there is a notebook that generates some of the class-wise comparison plots from the thesis. Additionally, in the subdirectory titled **results** you can find every result used in the thesis. These are saved in .pt format but can easily be opened with torch.load(...).
+
 ## Running Experiments
 All training invocations are centralized in the file **main.py**. There, all arguments are specified. These will be described here. Argument type *store_true* means that the argument is set true if it is included and false otherwise. No explicit value is needed.
 ### General Arguments
