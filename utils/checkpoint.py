@@ -52,41 +52,46 @@ def load_checkpoint(
     optimizer=None,
     scheduler=None,
     device="cpu",
-    strict=True,
     load_optimizer=True,
     load_scheduler=True,
 ):
-    checkpoint = torch.load(save_dir, map_location=device)
-    print(checkpoint.keys())
-    print(checkpoint["epoch"])
-
-    model_state = checkpoint["model"]
-
-    model_is_wrapped = hasattr(model, "module")
-    model_state_has_module = (
-        len(model_state) > 0
-        and next(iter(model_state)).startswith("module.")
+    checkpoint = torch.load(
+        save_dir,
+        map_location=device,
+        weights_only=True,
     )
 
-    if model_is_wrapped and not model_state_has_module:
-        model_state = _add_module_prefix(model_state)
+    model_state = checkpoint.get("model", checkpoint["state_dict"])
+    model_state = _strip_module_prefix(model_state)
 
-    if not model_is_wrapped and model_state_has_module:
-        model_state = _strip_module_prefix(model_state)
+    target_model = model.module if hasattr(model, "module") else model
+    target_state = target_model.state_dict()
 
-    model.load_state_dict(model_state, strict=strict)
+    if sum(k in target_state for k in model_state) < sum(
+        f"model.{k}" in target_state for k in model_state
+    ):
+        model_state = {
+            f"model.{k}": v
+            for k, v in model_state.items()
+        }
 
-    start_epoch = checkpoint.get("epoch", -1) + 1
+    for key in ("mean", "std"):
+        if key in target_state and key not in model_state:
+            model_state[key] = target_state[key]
+
+    for key in list(model_state):
+        if (
+            key in target_state
+            and model_state[key].shape != target_state[key].shape
+        ):
+            del model_state[key]
+
+    target_model.load_state_dict(model_state, strict=False)
 
     if load_optimizer and optimizer is not None and "optimizer" in checkpoint:
         optimizer.load_state_dict(checkpoint["optimizer"])
 
-        for state in optimizer.state.values():
-            for k, v in state.items():
-                if torch.is_tensor(v):
-                    state[k] = v.to(device)
-
     if load_scheduler and scheduler is not None and "scheduler" in checkpoint:
         scheduler.load_state_dict(checkpoint["scheduler"])
 
-    return start_epoch
+    return checkpoint.get("epoch", -1) + 1

@@ -4,6 +4,6 @@ logs/
 test-runs/*
 figures
 checkpoints/
-*.ipynb
 slurm/
 refactor_test/
+.ipynb_checkpoints

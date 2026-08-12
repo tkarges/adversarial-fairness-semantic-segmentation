@@ -85,6 +85,45 @@ These arguments control RL training for **training_type=rl**
 - **--rl-clean-weight-mode** (str) in ["pixel", "macro"]: determines the class-wise aggregation used by the clean loss function
 - **--rl-adv-weight-mode** (str) in ["pixel", "macro"]: determines the class-wise aggregation used by the adversarial loss function
 
+### Training Examples
+Please note that the argument *nproc_per_node* needs to be changed according to hardware specifications.
+
+#### Analysis (SegPGD-AT and SegPGD-AT-100)
+
+This trains SegPGD-AT on Cityscapes using a DeepLabV3 model:
+```
+torchrun --standalone --nproc_per_node=2 main.py --training-type "normal" --model "deeplabv3" --dataset "cityscapes" --model-savedir "." --epochs 200 --learning-rate 0.01 --batch-size 16 --eval-batch-size 8 --evaluate-robust --eval-interval 10 --adversarial-training --adversarial-loss-weight 1.0 --attacker "segpgd" --attack-iterations 3 --adversarial-training-mode "at_50_50"
+```
+
+The following command trains SegPGD-AT-100 on VOC 2012 using a PSPNet model:
+```
+torchrun --standalone --nproc_per_node=2 main.py --training-type "normal" --model "pspnet" --dataset "voc2012" --model-savedir "." --epochs 50 --learning-rate 0.01 --batch-size 16 --eval-batch-size 1 --evaluate-robust --eval-interval 4 --adversarial-training --adversarial-loss-weight 1.0 --attacker "segpgd" --attack-iterations 3 --adversarial-training-mode "at_100"
+```
+
+#### DAFA
+This can be used to train DAFA-CE with adversarial cross-entropy loss and SegPGD attacker.
+```
+torchrun --standalone --nproc_per_node=2 main.py --training-type "dafa" --model "deeplabv3" --dataset "cityscapes" --model-savedir "." --epochs 200 --learning-rate 0.01 --batch-size 16 --eval-batch-size 8 --adversarial-training --evaluate-robust --eval-interval 10 --dafa-mode "segpgd" --dafa-warmup-epochs 70 --dafa-lambda 1.5
+```
+
+This command trains DAFA-TRADES:
+```
+torchrun --standalone --nproc_per_node=2 main.py --training-type "dafa" --model "deeplabv3" --dataset "cityscapes" --model-savedir "." --epochs 200 --learning-rate 0.01 --batch-size 16 --eval-batch-size 8 --adversarial-training --evaluate-robust --eval-interval 10 --dafa-mode "trades-pgd" --dafa-warmup-epochs 70 --dafa-lambda 1.5 --dafa-beta 1.0
+```
+
+#### Reinforcement Learning
+
+This command trains the RL approaches from the thesis. For specific approaches, arguments pertaining to class crops and loss weighting need to be changed accordingly. This specific command corresponds to the method RL-Clean with clean loss weighting.
+```
+torchrun --standalone --nproc_per_node=2 main.py --training-type "rl" --model "deeplabv3" --dataset "cityscapes" --model-savedir "slurm/interactive" --epochs 200 --learning-rate 1e-4 --batch-size 16 --eval-batch-size 8 --adversarial-training --attacker "segpgd" --eval-attacker "segpgd" --evaluate-robust --eval-interval 1 --rl-action-epochs 1  --load-checkpoint --checkpoint-path "/checkpoints/DAFA/DAFA_CE_warmup_70.pth" --rl-clean-weight-mode "marco" --rl-adv-weight-mode "macro" --prob-class-crop 0.4 --rl-apply-clean-weight
+```
+
+This command can be used to train the RL-FT finetuning method mentioned in the thesis. It uses finetuning mode, indicated by *--checkpoint-finetune* and pixel-wise cross-entropy clean loss, which is indicated by the argument *--rl-clean-weight-mode "pixel"*. Furthermore, the SegPGD-AT checkpoint is loaded.
+```
+torchrun --standalone --nproc_per_node=2 main.py --training-type "rl" --model "deeplabv3" --dataset "cityscapes" --model-savedir "slurm/interactive" --epochs 20 --learning-rate 1e-4 --batch-size 16 --eval-batch-size 8 --adversarial-training --attacker "segpgd" --eval-attacker "segpgd" --evaluate-robust --eval-interval 1 --rl-action-epochs 1  --load-checkpoint --checkpoint-finetune --checkpoint-path "/checkpoints/cityscapes/deeplabv3/deeplabv3_cityscapes_segpgdat.pth" --rl-clean-weight-mode "pixel" --rl-adv-weight-mode "macro" --prob-class-crop 0.4 --rl-apply-adv-weight
+```
+
+
 ## Evaluating Checkpoints
 Checkpoints can be evaluated using the script **evaluate_checkpoints.py**. Results are saved in .pt format and can be inspected afterwards, e.g., using a short notebook and looking at the dictionary keys that are of interest.
 
@@ -96,3 +135,16 @@ Checkpoints can be evaluated using the script **evaluate_checkpoints.py**. Resul
 - **--eval-batch-size** (int): batch size for evaluation (VOC 2012 only works with 1)
 - **--evaluate-clean** (store_true): evaluates the checkpoint on clean data
 - **--evaluate-robust** (store_true): evaluates the checkpoint on perturbed data
+
+### Examples
+Here are some examples that show how checkpoint evaluation works.<br>
+
+The following command evaluates a DeepLabV3 checkpoint on the Cityscapes evaluation set. Both clean and robust evaluation are performed and the results are saved as **analysis/results/rl_final/cleanres_RL_ft.pt** and **analysis/results/rl_final/segpgd3res_RL_ft.pt**.
+```
+python evaluate_checkpoints.py --model "deeplabv3" --dataset "cityscapes" --checkpoint-path "checkpoints/RL_ft.pth" --result-path "analysis/results/rl_final" --result-name "RL_ft" --eval-batch-size 2 --evaluate-clean --evaluate-robust
+```
+
+This command evaluates a PSPNet checkpoint on VOC 2012 only on clean data:
+```
+python evaluate_checkpoints.py --model "pspnet" --dataset "voc2012" --checkpoint-path "checkpoints/voc2012/pspnet/pspnet_voc2012_segpgdat.pth" --result-path "analysis/results/voc2012/pspnet" --result-name "" --eval-batch-size 1 --evaluate-clean
+```
