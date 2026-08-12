@@ -13,6 +13,9 @@ from torchvision.transforms import functional as TF
 
 
 class ClassAwareRandomCrop:
+    '''
+    Class-aware random crop for RL frameworks
+    '''
     def __init__(
         self,
         size,
@@ -42,6 +45,7 @@ class ClassAwareRandomCrop:
                 dtype=torch.float32,
             ).clone()
 
+    # Coordinates for random cropping
     def _random_crop_coordinates(self, h, w):
         crop_h, crop_w = self.size
 
@@ -50,6 +54,7 @@ class ClassAwareRandomCrop:
 
         return top, left
 
+    # Determines suitable crop coordinates containing a specific pixel
     def _crop_coordinates_containing_pixel(
         self,
         y,
@@ -68,21 +73,16 @@ class ClassAwareRandomCrop:
         if top_min <= top_max:
             top = random.randint(top_min, top_max)
         else:
-            top = max(
-                0,
-                min(y - crop_h // 2, h - crop_h),
-            )
+            top = max(0, min(y - crop_h // 2, h - crop_h))
 
         if left_min <= left_max:
             left = random.randint(left_min, left_max)
         else:
-            left = max(
-                0,
-                min(x - crop_w // 2, w - crop_w),
-            )
+            left = max(0, min(x - crop_w // 2, w - crop_w))
 
         return top, left
 
+    # Crop is applied with specified coordinates
     def _apply_crop(self, img, mask, top, left):
         crop_h, crop_w = self.size
 
@@ -103,6 +103,7 @@ class ClassAwareRandomCrop:
             ),
         )
 
+    # Executed when an image is retrieved from the dataset
     def __call__(self, img, mask):
         crop_h, crop_w = self.size
         _, h, w = img.shape
@@ -110,6 +111,7 @@ class ClassAwareRandomCrop:
         pad_h = max(crop_h - h, 0)
         pad_w = max(crop_w - w, 0)
 
+        # Padding may be necessary
         if pad_h > 0 or pad_w > 0:
             padding = [0, 0, pad_w, pad_h]
 
@@ -127,43 +129,28 @@ class ClassAwareRandomCrop:
 
         _, h, w = img.shape
 
+        # Determines whether a random crop or a class-aware crop is performed
         if random.random() >= self.prob_class_crop:
             top, left = self._random_crop_coordinates(h, w)
             return self._apply_crop(img, mask, top, left)
 
-        mask_long = torch.as_tensor(
-            mask,
-            dtype=torch.long,
-        )
+        # Class-aware crop is performed in this case
+        mask_long = torch.as_tensor(mask, dtype=torch.long)
 
-        valid = (
-            (mask_long != self.ignore_index)
-            & (mask_long >= 0)
-            & (mask_long < self.num_classes)
-        )
+        valid = (mask_long != self.ignore_index) & (mask_long >= 0) & (mask_long < self.num_classes)
 
-        counts = torch.bincount(
-            mask_long[valid].flatten(),
-            minlength=self.num_classes,
-        )
+        counts = torch.bincount(mask_long[valid].flatten(), minlength=self.num_classes)
 
-        present_classes = torch.where(
-            counts >= self.min_pixels_in_image
-        )[0]
+        present_classes = torch.where(counts >= self.min_pixels_in_image)[0]
 
         if present_classes.numel() == 0:
             top, left = self._random_crop_coordinates(h, w)
             return self._apply_crop(img, mask, top, left)
 
         if self.prob_weights is None:
-            class_weights = torch.ones(
-                present_classes.numel(),
-                dtype=torch.float32,
-            )
+            class_weights = torch.ones(present_classes.numel(), dtype=torch.float32)
         else:
-            class_weights = self.prob_weights[
-                present_classes.cpu()
-            ].float()
+            class_weights = self.prob_weights[present_classes.cpu()].float()
 
         class_weights = torch.nan_to_num(
             class_weights,
@@ -175,18 +162,12 @@ class ClassAwareRandomCrop:
         if class_weights.sum() <= 0:
             class_weights = torch.ones_like(class_weights)
 
-        class_probabilities = (
-            class_weights / class_weights.sum()
-        )
+        class_probabilities = class_weights / class_weights.sum()
 
-        sampled_position = torch.multinomial(
-            class_probabilities,
-            num_samples=1,
-        ).item()
+        # Samples a target class
+        sampled_position = torch.multinomial(class_probabilities, num_samples=1).item()
 
-        target_class = int(
-            present_classes[sampled_position].item()
-        )
+        target_class = int(present_classes[sampled_position].item())
 
         ys, xs = torch.where(mask_long == target_class)
 
@@ -194,12 +175,9 @@ class ClassAwareRandomCrop:
         best_left = None
         best_target_count = -1
 
+        # Iterativel determines crop coordinates and keeps the best ones
         for _ in range(self.max_attempts):
-            pixel_idx = torch.randint(
-                low=0,
-                high=ys.numel(),
-                size=(1,),
-            ).item()
+            pixel_idx = torch.randint(low=0, high=ys.numel(),size=(1,)).item()
 
             y = int(ys[pixel_idx].item())
             x = int(xs[pixel_idx].item())
@@ -211,13 +189,7 @@ class ClassAwareRandomCrop:
                 w=w,
             )
 
-            target_count = (
-                mask_long[
-                    top:top + crop_h,
-                    left:left + crop_w,
-                ]
-                == target_class
-            ).sum().item()
+            target_count = (mask_long[top:top + crop_h, left:left + crop_w] == target_class).sum().item()
 
             if target_count > best_target_count:
                 best_target_count = target_count
@@ -346,7 +318,6 @@ class CityscapesDataset(Cityscapes):
         mask = self.labelid_to_trainid[mask]
         mask = Mask(mask.to(torch.uint8))
 
-        # Crop based on class distribution --> infrequent classes should be present (if they are present in the full size example)
         if self.augment:
             img, mask = self.flip_tf(img, mask)
             img, mask = self.resize_tf(img, mask)

@@ -1,3 +1,6 @@
+'''
+Utilities for distributed training
+'''
 import torch
 import torch.distributed as dist
 import os
@@ -21,11 +24,9 @@ def get_rank():
     if dist.is_available() and dist.is_initialized():
         return dist.get_rank()
 
-    # torchrun sets RANK globally
     if "RANK" in os.environ:
         return int(os.environ["RANK"])
 
-    # fallback for non-distributed execution
     return 0
 
 def is_main_process():

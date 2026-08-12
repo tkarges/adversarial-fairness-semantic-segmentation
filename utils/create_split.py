@@ -1,3 +1,7 @@
+'''
+This is not actively used any more, but it provided the policy validation split
+that was reused later in the project by reinforcement learning approaches.
+'''
 import random
 import numpy as np
 from cityscapes import CityscapesDataset

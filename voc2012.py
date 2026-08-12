@@ -1,3 +1,6 @@
+'''
+VOC 2012 dataset implementation
+'''
 import numpy as np
 import torch
 import math
@@ -7,38 +10,7 @@ from torchvision.transforms import InterpolationMode
 from torchvision.transforms.v2 import functional as F 
 from torchvision.tv_tensors import Mask
 
-class PadToDivisible:
-    def __init__(self, divisor=8, image_fill=0, mask_fill=255):
-        self.divisor = divisor
-        self.image_fill = image_fill
-        self.mask_fill = mask_fill
-
-    def __call__(self, img, mask):
-        h, w = img.shape[-2:]
-
-        new_h = ((h + self.divisor - 1) // self.divisor) * self.divisor
-        new_w = ((w + self.divisor - 1) // self.divisor) * self.divisor
-
-        pad_h = new_h - h
-        pad_w = new_w - w
-
-        if pad_h == 0 and pad_w == 0:
-            return img, mask
-
-        img = F.pad(
-            img,
-            padding=[0, 0, pad_w, pad_h],
-            fill=self.image_fill,
-        )
-
-        mask = F.pad(
-            mask,
-            padding=[0, 0, pad_w, pad_h],
-            fill=self.mask_fill,
-        )
-
-        return img, mask
-    
+# PSPNet needs a specific image size to work
 class PadToPSPNetSize:
     def __init__(self, divisor=8, image_fill=0, mask_fill=255):
         self.divisor = divisor
@@ -76,6 +48,7 @@ class PadToPSPNetSize:
 
         return img, mask
 
+# Used for the evaluation outlined in related work
 class LongSideResize:
     def __init__(self, long_side=512):
         self.long_side = long_side

@@ -10,6 +10,11 @@ ment of class-wise IoU scores of the most vulnerable classes. The method shows t
 
 ## Important Setup Notes
 
+### Environment
+A suitable conda environment can be created like this:
+```
+conda env create --name envname --file=environment.yml
+```
 ### Models
 
 The model classes used here are adapted from the source paper on adversarial robustness in segmentation. These models use a specialized pretrained ResNet backbone that cannot be downloaded from the official PyTorch source. In the release provided alongside this repository, there is a file named **resnet50_v2.pth**. This checkpoint file has to be copied to **checkpoints/resnet/**. Without this step it is not possible to initialize models for training! Using pretrained models should still be possible without this, as the ResNet parameters are saved in the final checkpoint files.
@@ -31,6 +36,10 @@ In case the training script starts but appears to be stuck before the first epoc
 ```
 NCCL_IB_DISABLE=1 NCCL_P2P_DISABLE=1 torchrun --standalone etc.
 ```
+
+## General Structure
+The entry point for all training experiments is **main.py**. All possible arguments for performing different experiments are specified there. Afer it is invoked, it automatically starts one of the specific training scripts **train_normal.py**, **train_dafa.py**, or **train_rl.py**. In these scripts, the actual implementations can be found. Corresponding loss functions, as well as statistics computations in the case of DAFA, can be found in the corresponding files titled **losses_{approach}.py**.
+
 ## Running Experiments
 All training invocations are centralized in the file **main.py**. There, all arguments are specified. These will be described here. Argument type *store_true* means that the argument is set true if it is included and false otherwise. No explicit value is needed.
 ### General Arguments

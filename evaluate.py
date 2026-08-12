@@ -7,6 +7,9 @@ from tqdm.auto import tqdm
 
 @torch.no_grad()
 def model_prediction_bias(logits, targets, num_classes, ignore_index=255, class_subset=None):
+    '''
+    Computes model prediction bias
+    '''
     if targets.ndim == 2:
         targets = targets.unsqueeze(0)
 
@@ -27,7 +30,7 @@ def model_prediction_bias(logits, targets, num_classes, ignore_index=255, class_
         class_subset = torch.as_tensor(
             class_subset,
             device=targets.device,
-            dtype=targets.dtype,
+            dtype=targets.dtype
         )
         mask = valid & torch.isin(targets, class_subset)
     else:
@@ -38,7 +41,7 @@ def model_prediction_bias(logits, targets, num_classes, ignore_index=255, class_
 
     targets_onehot = F.one_hot(
         targets_flat,
-        num_classes=num_classes,
+        num_classes=num_classes
     ).float()
 
     gn = (probs_flat * (1.0 - targets_onehot)).sum(dim=0)
@@ -53,6 +56,9 @@ def build_confusion_matrix(
     num_classes,
     ignore_index
 ):
+    '''
+    Constructs a confusion matrix out of class-wise predictions and targets
+    '''
     pred = pred.view(-1).to(torch.int64)
     target = target.view(-1).to(torch.int64)
 
@@ -132,6 +138,9 @@ def evaluate(
     hard_classes=None,
     model_name=None
 ):
+    '''
+    Performs one evaluation pass over the dataset, either with attacker or on clean data
+    '''
     if is_main_process():
         attacker_name = attacker.__class__.__name__ if attacker is not None else "None"
         dist_print('\nEntered Evaluation')

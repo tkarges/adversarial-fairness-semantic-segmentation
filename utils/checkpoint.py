@@ -1,3 +1,7 @@
+'''
+Loading and saving model checkpoints
+'''
+
 import os
 import torch
 
@@ -61,8 +65,12 @@ def load_checkpoint(
         weights_only=True,
     )
 
-    model_state = checkpoint.get("model", checkpoint["state_dict"])
-    model_state = _strip_module_prefix(model_state)
+    if "model" in checkpoint:
+        model_state = checkpoint["model"]
+    else:
+        model_state = checkpoint["state_dict"]
+    #model_state = checkpoint.get("model", checkpoint["state_dict"])
+    #model_state = _strip_module_prefix(model_state)
 
     target_model = model.module if hasattr(model, "module") else model
     target_state = target_model.state_dict()

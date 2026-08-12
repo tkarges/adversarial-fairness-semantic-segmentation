@@ -113,7 +113,7 @@ def build_policy_state(
     robust_scores,
     previous_robust_scores,
     epoch,
-    end_epoch,
+    end_epoch
 ):
     '''
     Builds a state from model validation feedback.
@@ -153,10 +153,10 @@ def build_policy_state(
             robust_scores.mean().item(),
             robust_scores.min().item(),
             robust_scores.std(unbiased=False).item(),
-            progress,
+            progress
         ],
         dtype=torch.float32,
-        device=clean_scores.device,
+        device=clean_scores.device
     )
 
     # Final state of size 4C+5, where C = number of classes
@@ -171,7 +171,7 @@ def action_to_class_weights(
     fixed_target_classes,
     uniform_mix=0.30,
     min_weight=0.7,
-    max_weight=1.6,
+    max_weight=1.6
 ):
     '''
     Computes class-wise loss weights from an action
@@ -193,7 +193,7 @@ def action_to_class_weights(
 
     fixed_target_classes = fixed_target_classes.to(
         device=robust_scores.device,
-        dtype=torch.long,
+        dtype=torch.long
     )
 
     weakness = 1.0 - robust_scores
@@ -210,9 +210,9 @@ def action_to_class_weights(
             _standardize(weakness),
             _standardize(robustness_gap),
             _standardize(rarity),
-            _standardize(target_membership),
+            _standardize(target_membership)
         ],
-        dim=1,
+        dim=1
     )
 
     coefficients = F.softmax(action, dim=0)
@@ -246,7 +246,7 @@ def action_to_class_weights(
         "weights": weights.detach(),
         "weight_min": weights.min().detach(),
         "weight_max": weights.max().detach(),
-        "weight_std": weights.std(unbiased=False).detach(),
+        "weight_std": weights.std(unbiased=False).detach()
     }
 
     return weights, diagnostics
@@ -262,7 +262,7 @@ def calculate_policy_reward(
     robust_drop_tolerance=0.005,
     clean_drop_tolerance=0.015,
     class_drop_tolerance=0.02,
-    target_drop_tolerance=0.015,
+    target_drop_tolerance=0.015
 ):
     '''
     Calculates the reward for an action
@@ -274,7 +274,7 @@ def calculate_policy_reward(
 
     fixed_target_classes = fixed_target_classes.to(
         device=new_robust.device,
-        dtype=torch.long,
+        dtype=torch.long
     )
 
     old_fixed_bottom = old_robust[fixed_target_classes].mean()
@@ -396,7 +396,7 @@ def save_rl_checkpoint(
     baseline,
     weights,
     previous_robust,
-    rl_fixed_bottom_classes,
+    rl_fixed_bottom_classes
 ):
     torch.save(
         {
@@ -413,9 +413,9 @@ def save_rl_checkpoint(
                 None
                 if rl_fixed_bottom_classes is None
                 else rl_fixed_bottom_classes.detach().cpu()
-            ),
+            )
         },
-        path,
+        path
     )
 
 
@@ -424,7 +424,7 @@ def load_rl_checkpoint(
     policy,
     optimizer,
     baseline,
-    device,
+    device
 ):
     state = torch.load(path, map_location=device)
 
@@ -442,7 +442,7 @@ def load_rl_checkpoint(
     if fixed_bottom_classes is not None:
         fixed_bottom_classes = fixed_bottom_classes.to(
             device=device,
-            dtype=torch.long,
+            dtype=torch.long
         )
 
     return weights, previous_robust, fixed_bottom_classes
@@ -466,5 +466,5 @@ def select_fixed_bottom_classes(
     return torch.topk(
         selection_scores,
         k=k,
-        largest=False,
+        largest=False
     ).indices

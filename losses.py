@@ -11,6 +11,9 @@ def ce_loss(
     aux_weight=0.4,
     return_logits=False
 ):
+    '''
+    Pixel-wise cross-entropy loss for semantic segmentation
+    '''
     out = model(X, return_aux=True)
 
     if isinstance(out, tuple):
@@ -23,7 +26,7 @@ def ce_loss(
             logits,
             size=y.shape[-2:],
             mode="bilinear",
-            align_corners=False,
+            align_corners=False
         )
 
     valid_mask = ((y != ignore_index) & (y >= 0) & (y < num_classes))
@@ -33,7 +36,7 @@ def ce_loss(
         y,
         weight=None,
         ignore_index=ignore_index,
-        reduction="none",
+        reduction="none"
     )
 
     if valid_mask.any():
@@ -49,7 +52,7 @@ def ce_loss(
                 aux_logits,
                 size=y.shape[-2:],
                 mode="bilinear",
-                align_corners=False,
+                align_corners=False
             )
 
         aux_ce = F.cross_entropy(
@@ -69,6 +72,9 @@ def clean_training_loss(
     num_classes,
     ignore_index
 ):
+    '''
+    Clean training requires only a clean cross-entropy loss
+    '''
     amp_enabled = X.is_cuda
     device_type = X.device.type
         
@@ -93,6 +99,9 @@ def adversarial_training_loss(
     ignore_index,
     adversarial_weight=1.0,
 ): 
+    '''
+    Standard adversarial training uses a linear combination of clean and adversarial loss 
+    '''
     loss_clean = ce_loss(
         model=model,
         X=X,
@@ -117,20 +126,6 @@ def adversarial_training_loss(
 def adversarial_training_50_50_loss(model, X_clean, X_adv, y_clean, y_adv, num_classes, ignore_index):
     """
     Computes the 50/50 adversarial training objective.
-
-    The loss combines the clean segmentation loss and the adversarial
-    segmentation loss with equal weight. This objective is used for the
-    at_50_50 experiment setting in the thesis.
-
-    Args:
-        model: Segmentation model returning logits of shape [B, C, H, W].
-        X_clean: Clean input batch.
-        X_adv: Adversarially perturbed input batch.
-        y: Ground-truth segmentation mask.
-        ignore_index: Label value excluded from the loss.
-
-    Returns:
-        Scalar training loss.
     """
     if X_clean.device != X_adv.device:
         raise ValueError(f'Clean and adversarial samples need to be on the same device, \
@@ -156,6 +151,9 @@ def adversarial_training_50_50_loss(model, X_clean, X_adv, y_clean, y_adv, num_c
 
 
 def adversarial_training_100_loss(model, X_adv, y, num_classes, ignore_index):
+    '''
+    Computes the losses for models trained with only adversarial examples
+    '''
     amp_enabled = X_adv.is_cuda
     device_type = X_adv.device.type
     

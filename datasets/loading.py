@@ -15,6 +15,7 @@ def build_dataset(dataset, root, split, prob_class_crop, use_rl=False, split_idx
             ValueError(f"Unsupported dataset: {dataset}")
     else:
         if split == "train":
+            # RL needs a separate policy set; the indices for this set are read from disk to save time
             split_idx = torch.load(split_idx_path, map_location="cpu", weights_only=True)
             train_idx = split_idx["train_main_idx"]
             policy_idx = split_idx["train_weight_idx"]

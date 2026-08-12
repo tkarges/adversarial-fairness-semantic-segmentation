@@ -10,13 +10,6 @@ def weighted_pixel_ce(
 ):
     '''
     Computes class weighted cross-entropy loss.
-    
-    Parameters:
-        logits: torch.Tensor of shape [B x C x H x W] containing model predictions
-        y: torch.Tensor of shape [B x H x W] containing class labels
-        num_classes: number of classes in the dataset
-        ignore_index: dataset-specific label index that is ignore in the loss computation
-        class_weights: torch.Tensor of shape [num_classes] containing one weight for each class 
     '''
     valid_mask = ((y != ignore_index) & (y < num_classes) & (y >= 0))
     
@@ -63,6 +56,9 @@ def macro_averaged_class_ce(
     ignore_index, 
     class_weights=None
 ):
+    '''
+    Computes the macro-averaged loss for the RL framework
+    '''
     valid_mask = ((y != ignore_index) & (y >= 0) & (y < num_classes))
     
     if not valid_mask.any():
@@ -111,6 +107,7 @@ def macro_averaged_class_ce(
     if not class_losses:
         return logits.float().sum() * 0.0
     
+    # Losses are now a list containing one element per class --> equal importance
     class_losses = torch.stack(class_losses)
     class_level_weights = torch.stack(class_level_weights).float()
     
@@ -127,6 +124,10 @@ def ce_loss(
     return_logits=False,
     weight_mode="pixel"
 ):
+    '''
+    General loss function that can use either pixel or macro loss
+    '''
+    
     if weight_mode == "pixel":
         loss_fn = weighted_pixel_ce
     elif weight_mode == "macro":
@@ -181,6 +182,9 @@ def adversarial_training_loss(
     adv_weight_mode="pixel",
     adversarial_weight=1.0
 ):
+    '''
+    Combined clean and adversarial loss as overall objective for the RL approaches
+    '''
     amp_enabled = X_clean.is_cuda and X_adv.is_cuda
     device_type = X_clean.device.type
     
