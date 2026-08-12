@@ -1,0 +1,5 @@
+## General Information on Models
+
+The models used here are the ones adapted from the ones used in this paper implementation: https://github.com/szegedai/Robust-Segmentation-Evaluation<br>
+These are in turn taken from the following repository: https://github.com/JIA-Lab-research/Robust-Semantic-Segmentation/tree/main<br>
+For checkpoint compatibility and experimental evaluation, these model classes are reused in this repository. This means that the classes **pspnet.py** and **resnet.py** are adapted from this source repository with some slight modifications. These model classes use a different version of ResNet, which is not available on PyTorch. Therefore, the custom ResNet50 checkpoint provided in the release alongside this repository needs to be placed inside the folder **/checkpoints/resnet/** to enable model initialization. Checkpoint loading works without this ResNet checkpoint.

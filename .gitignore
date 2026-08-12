@@ -1,0 +1,9 @@
+logs/
+*__pycache__*
+*.pth
+test-runs/*
+figures
+checkpoints/
+*.ipynb
+slurm/
+refactor_test/
